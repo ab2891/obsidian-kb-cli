@@ -1,7 +1,12 @@
 {
-  "name": "obsidian-kb",
+  "name": "obsidian-kb-cli",
   "version": "0.1.0",
-  "description": "CLI for the Karpathy-style LLM-wiki workflow on Obsidian vaults — lint, bootstrap, log",
+  "description": "CLI for the Karpathy-style LLM-wiki workflow on Obsidian vaults — lint, bootstrap, index, log. Companion to the obsidian-kb skill.",
+  "homepage": "https://github.com/ab2891/obsidian-kb-cli",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ab2891/obsidian-kb-cli.git"
+  },
   "bin": {
     "obkb": "dist/index.js"
   },
