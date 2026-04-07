@@ -27,13 +27,24 @@ export interface Finding {
   detail: string;
 }
 
-interface LintOptions {
+export interface LintOptions {
   topic?: string;
   json?: boolean;
   staleMonths?: string;
 }
 
-export async function lintCommand(vault: string, opts: LintOptions): Promise<void> {
+export interface LintResult {
+  vault: string;
+  topics: string[];
+  findings: Finding[];
+}
+
+/**
+ * Pure(-ish) lint runner — does I/O to read the vault and shells out to git
+ * for stale-claim checks, but does not exit the process or print anything.
+ * Reusable from `lintCommand` and from `watchCommand`.
+ */
+export function runLint(vault: string, opts: LintOptions): LintResult {
   const absVault = path.resolve(vault);
   if (!fs.existsSync(absVault) || !fs.statSync(absVault).isDirectory()) {
     throw new Error(`Vault not found: ${absVault}`);
@@ -56,13 +67,17 @@ export async function lintCommand(vault: string, opts: LintOptions): Promise<voi
     findings.push(...lintTopic(topic, notes, staleMonths));
   }
 
-  if (opts.json) {
-    process.stdout.write(JSON.stringify({ vault: absVault, topics, findings }, null, 2) + "\n");
-    process.exit(findings.some((f) => f.severity === "error") ? 1 : 0);
-  }
+  return { vault: absVault, topics, findings };
+}
 
-  printHuman(absVault, topics, findings);
-  process.exit(findings.some((f) => f.severity === "error") ? 1 : 0);
+export async function lintCommand(vault: string, opts: LintOptions): Promise<void> {
+  const result = runLint(vault, opts);
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+  } else {
+    printHuman(result.vault, result.topics, result.findings);
+  }
+  process.exit(result.findings.some((f) => f.severity === "error") ? 1 : 0);
 }
 
 function parseStaleMonths(raw: string | undefined): number {
@@ -192,7 +207,7 @@ function lintTopic(topic: string, notes: Note[], staleMonths: number): Finding[]
   return findings;
 }
 
-function printHuman(vault: string, topics: string[], findings: Finding[]): void {
+export function printHuman(vault: string, topics: string[], findings: Finding[]): void {
   console.log(kleur.bold(`obsidian-kb lint`) + ` — ${vault}`);
   console.log(`Topics scanned: ${topics.join(", ") || kleur.dim("(none)")}`);
   console.log("");

@@ -39,6 +39,16 @@ obkb lint ~/vault --stale-months 3    # tighter staleness window
 obkb lint ~/vault --json              # machine-readable
 ```
 
+### `obkb watch <vault> [--topic X] [--stale-months N] [--debounce ms]`
+
+Watches the vault for any `.md` change and re-runs `lint` on every change, vitest-watch style. Ideal for "constantly updating" workflows where you're editing notes alongside an LLM agent and want findings to surface immediately. Initial lint on startup; debounces rapid bursts of saves into a single re-lint (default 250ms — atomic-write editors emit 2-3 events per save). Uses `chokidar` so it works on WSL → Windows mounts and OneDrive folders where vanilla `fs.watch` is unreliable. Ctrl+C to exit.
+
+```bash
+obkb watch ~/vault                          # all topics, default debounce
+obkb watch ~/vault --topic Projects         # restrict to one topic
+obkb watch ~/vault --debounce 500           # slower debounce for slow disks
+```
+
 ### `obkb bootstrap <topic> --vault <path> [--template KIND] [--force]`
 
 Scaffolds `<topic>/CLAUDE.md`, `index.md`, `log.md` with topic-aware frontmatter. Templates:

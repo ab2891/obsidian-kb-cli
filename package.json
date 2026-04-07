@@ -1,6 +1,6 @@
 {
   "name": "obsidian-kb-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CLI for the Karpathy-style LLM-wiki workflow on Obsidian vaults — lint, bootstrap, index, log. Companion to the obsidian-kb skill.",
   "homepage": "https://github.com/ab2891/obsidian-kb-cli",
   "repository": {
@@ -25,6 +25,7 @@
   "author": "ab2891",
   "license": "MIT",
   "dependencies": {
+    "chokidar": "^4.0.1",
     "commander": "^12.1.0",
     "gray-matter": "^4.0.3",
     "kleur": "^4.1.5",

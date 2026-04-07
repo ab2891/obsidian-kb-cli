@@ -4,15 +4,16 @@ import { lintCommand } from "./commands/lint";
 import { bootstrapCommand } from "./commands/bootstrap";
 import { logCommand } from "./commands/log";
 import { indexCommand } from "./commands/index-cmd";
+import { watchCommand } from "./commands/watch";
 
 const program = new Command();
 
 program
   .name("obkb")
   .description(
-    "Karpathy-style LLM-wiki workflow for Obsidian vaults — lint, bootstrap, log",
+    "Karpathy-style LLM-wiki workflow for Obsidian vaults — lint, watch, bootstrap, index, log",
   )
-  .version("0.1.0");
+  .version("0.2.0");
 
 program
   .command("lint")
@@ -45,6 +46,26 @@ program
   )
   .option("--force", "Overwrite existing files in the topic folder if they exist")
   .action(bootstrapCommand);
+
+program
+  .command("watch")
+  .description(
+    "Watch a vault for .md changes and re-lint on every change (vitest-watch style)",
+  )
+  .argument("<vault>", "Absolute path to the Obsidian vault root")
+  .option(
+    "-t, --topic <topic>",
+    "Restrict lint to a single top-level topic folder. If omitted, lints every topic with an index.md.",
+  )
+  .option(
+    "--stale-months <n>",
+    "Treat status:active entries whose local_path git-history hasn't moved in this many months as stale (default 6)",
+  )
+  .option(
+    "--debounce <ms>",
+    "Coalesce file events within this many ms before re-linting (default 250)",
+  )
+  .action(watchCommand);
 
 program
   .command("index")
