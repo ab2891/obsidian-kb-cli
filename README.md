@@ -7,6 +7,7 @@
 ```bash
 npm i -g obsidian-kb-cli
 obkb --help
+obkb help
 ```
 
 Or run without installing:
@@ -16,6 +17,14 @@ npx obsidian-kb-cli lint /path/to/vault
 ```
 
 ## Commands
+
+Use `obkb help` to list commands, or `obkb help <command>` for command-specific usage:
+
+```bash
+obkb help
+obkb help lint
+obkb help bootstrap
+```
 
 ### `obkb lint <vault> [--topic X] [--stale-months N] [--json]`
 

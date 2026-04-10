@@ -15,6 +15,8 @@ program
   )
   .version("0.2.0");
 
+program.addHelpCommand("help [command]", "Display help for a command");
+
 program
   .command("lint")
   .description(
