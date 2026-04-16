@@ -92,21 +92,22 @@ function parseStaleMonths(raw: string | undefined): number {
 function lintTopic(topic: string, notes: Note[], staleMonths: number): Finding[] {
   const findings: Finding[] = [];
 
-  const indexNote = notes.find(
-    (n) => n.topic === topic && n.basename.toLowerCase() === "index",
-  );
+  const indexNote = notes.find((n) => n.vaultPath === `${topic}/index`);
   if (!indexNote) return findings;
 
-  const claudeNote = notes.find(
-    (n) => n.topic === topic && n.basename.toLowerCase() === "claude",
-  );
+  const claudeNote = notes.find((n) => n.vaultPath === `${topic}/CLAUDE`);
   const schemaFields = claudeNote ? extractTopicSchema(claudeNote.body) : null;
 
   const entries = entryNotesForTopic(topic, notes);
   const indexBody = indexNote.body;
 
-  // 1. Orphan notes — entry files not referenced by topic/index.md
-  for (const entry of entries) {
+  // 1. Orphan notes — direct children not referenced by topic/index.md.
+  // Only check depth-1 entries (e.g. projects/foo, not projects/foo/bar);
+  // nested pages belong in their subdirectory's own index.md.
+  const directEntries = entries.filter(
+    (e) => e.vaultPath.split("/").length === 2,
+  );
+  for (const entry of directEntries) {
     const candidates = [
       `[[${entry.vaultPath}]]`,
       `[[${entry.basename}]]`,
