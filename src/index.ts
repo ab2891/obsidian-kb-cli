@@ -13,7 +13,7 @@ program
   .description(
     "Karpathy-style LLM-wiki workflow for Obsidian vaults — lint, watch, bootstrap, index, log",
   )
-  .version("0.2.0");
+  .version("0.4.0");
 
 program.addHelpCommand("help [command]", "Display help for a command");
 

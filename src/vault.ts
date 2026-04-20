@@ -106,6 +106,31 @@ export function resolveWikilink(target: string, notes: Note[]): Note | undefined
 }
 
 /**
+ * Check whether a wikilink target refers to a non-markdown attachment that
+ * actually exists on disk inside the vault. Obsidian resolves `[[X.pdf]]`
+ * and `[[Folder/Y.png]]` as attachment links, but those aren't notes so
+ * `resolveWikilink` always returns undefined for them. Use this to suppress
+ * false-positive broken-link findings for valid attachment references.
+ */
+export function attachmentExists(target: string, vaultRoot: string): boolean {
+  const norm = target.replace(/\\/g, "/");
+  // Anything ending in .md is a note — let resolveWikilink handle it.
+  if (/\.md$/i.test(norm)) return false;
+  // Only treat as attachment if it has SOME file extension; bare titles
+  // like `lifeBot` should still flow through the note-resolution path.
+  if (!/\.[a-z0-9]+$/i.test(norm)) return false;
+  const abs = path.join(vaultRoot, norm);
+  // Guard against `..` traversal — keep the resolved path inside the vault.
+  const rel = path.relative(vaultRoot, abs);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) return false;
+  try {
+    return fs.statSync(abs).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Discover every "topic" in the vault — a top-level folder containing an `index.md`.
  * These are the folders the KB workflow tracks.
  */
@@ -122,9 +147,33 @@ export function discoverTopics(notes: Note[]): string[] {
 /**
  * For a topic, list every entry note (i.e. excluding index.md, log.md, CLAUDE.md,
  * _skills-matrix.md, and other underscore- or special-prefixed convention files).
+ *
+ * Sub-folders that have their own `index.md` are treated as nested topics — their
+ * entries are NOT counted as entries of the parent topic. This avoids double-flagging
+ * sub-KB notes (e.g. `Internships/IBM OA Prep/to-review`) as orphans of the parent
+ * topic when they're properly indexed by their sub-folder's own index.
  */
 export function entryNotesForTopic(topic: string, notes: Note[]): Note[] {
-  return notes.filter((n) => n.topic === topic && isEntryNote(n.basename));
+  // Identify sub-folder paths that have their own index.md.
+  const nestedIndexFolders = new Set<string>();
+  for (const n of notes) {
+    if (n.topic !== topic) continue;
+    if (n.basename.toLowerCase() !== "index") continue;
+    if (n.vaultPath === `${topic}/index`) continue; // skip the topic's own index
+    // Drop the trailing "/index" to get the sub-folder path.
+    const folder = n.vaultPath.slice(0, n.vaultPath.length - "/index".length);
+    nestedIndexFolders.add(folder);
+  }
+
+  return notes.filter((n) => {
+    if (n.topic !== topic) return false;
+    if (!isEntryNote(n.basename)) return false;
+    // Skip notes that live inside any nested-topic sub-folder.
+    for (const folder of nestedIndexFolders) {
+      if (n.vaultPath.startsWith(folder + "/")) return false;
+    }
+    return true;
+  });
 }
 
 const RESERVED_BASENAMES = new Set([

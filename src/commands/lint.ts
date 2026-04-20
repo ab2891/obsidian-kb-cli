@@ -5,6 +5,7 @@ import {
   readVault,
   extractWikilinks,
   resolveWikilink,
+  attachmentExists,
   discoverTopics,
   entryNotesForTopic,
   Note,
@@ -64,7 +65,7 @@ export function runLint(vault: string, opts: LintOptions): LintResult {
 
   const findings: Finding[] = [];
   for (const topic of topics) {
-    findings.push(...lintTopic(topic, notes, staleMonths));
+    findings.push(...lintTopic(topic, notes, staleMonths, absVault));
   }
 
   return { vault: absVault, topics, findings };
@@ -89,9 +90,12 @@ function parseStaleMonths(raw: string | undefined): number {
   return n;
 }
 
-function lintTopic(topic: string, notes: Note[], staleMonths: number): Finding[] {
+function lintTopic(topic: string, notes: Note[], staleMonths: number, vaultRoot: string): Finding[] {
   const findings: Finding[] = [];
 
+  // Match the TOPIC's index/CLAUDE by EXACT vaultPath. Sub-folders inside the
+  // topic may have their own index.md / CLAUDE.md (nested sub-KBs); we don't
+  // want to accidentally pick those up as the topic-level files.
   const indexNote = notes.find((n) => n.vaultPath === `${topic}/index`);
   if (!indexNote) return findings;
 
@@ -187,21 +191,23 @@ function lintTopic(topic: string, notes: Note[], staleMonths: number): Finding[]
     }
   }
 
-  // 5. Broken wikilinks anywhere in the topic (including index, log, entries)
+  // 5. Broken wikilinks anywhere in the topic (including index, log, entries).
+  //    Wikilinks pointing to non-.md attachments (e.g. `[[Folder/foo.pdf]]`)
+  //    are not notes — Obsidian resolves them as attachments, and we treat
+  //    them as valid as long as the file exists on disk inside the vault.
   const topicNotes = notes.filter((n) => n.topic === topic);
   for (const n of topicNotes) {
     const links = extractWikilinks(n.body);
     for (const link of links) {
-      const resolved = resolveWikilink(link, notes);
-      if (!resolved) {
-        findings.push({
-          severity: "error",
-          topic,
-          category: "broken-link",
-          note: n.vaultPath,
-          detail: `[[${link}]] does not resolve to any note in the vault`,
-        });
-      }
+      if (resolveWikilink(link, notes)) continue;
+      if (attachmentExists(link, vaultRoot)) continue;
+      findings.push({
+        severity: "error",
+        topic,
+        category: "broken-link",
+        note: n.vaultPath,
+        detail: `[[${link}]] does not resolve to any note in the vault`,
+      });
     }
   }
 
